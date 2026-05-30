@@ -28,8 +28,8 @@ keywords = [
 
 classifiers = [
   "Development Status :: 3 - Alpha",
-  "Intended Audience :: Developers/Hobbyists",
-  "Intended Audience :: Science/Technology/Engineering/Research",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Education",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
@@ -67,10 +67,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage      = "https://github.com/Wafula_Ian01/rlmf"
-Documentation = "https://github.com/Wafula_Ian01/rlmf#readme"
-Repository    = "https://github.com/Wafula_Ian01/rlmf.git"
-"Bug Tracker" = "https://github.com/Wafula_Ian01/rlmf/issues"
+Homepage      = "https://rlmf.vercel.app/"
+Documentation = "https://github.com/Wafula-Ian01/rlmf/blob/main/README.md"
+Repository    = "https://github.com/Wafula-Ian01/rlmf.git"
+"Bug Tracker" = "https://github.com/Wafula-Ian01/rlmf/issues"
 
 # ── CLI entry-point ──────────────────────────────────────────────────────────
 
