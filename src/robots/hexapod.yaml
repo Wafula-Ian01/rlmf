@@ -1,0 +1,23 @@
+name: Hexapod
+body:
+  segments:
+    - thorax
+  length: 0.30
+  width: 0.18
+  height: 0.09
+limbs:
+  - type: leg
+    count: 6
+    joints:
+      hip:
+        min: -90
+        max: 90
+      knee:
+        min: 0
+        max: 120
+      ankle:
+        min: -45
+        max: 45
+    segment_lengths: [0.07, 0.12, 0.10]
+physics:
+  mass: 1.2kg

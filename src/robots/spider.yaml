@@ -1,0 +1,24 @@
+name: SpiderBot
+body:
+  segments:
+    - cephalothorax
+    - abdomen
+  length: 0.25
+  width: 0.20
+  height: 0.08
+limbs:
+  - type: leg
+    count: 8
+    joints:
+      hip:
+        min: -90
+        max: 90
+      knee:
+        min: 0
+        max: 140
+      ankle:
+        min: -60
+        max: 60
+    segment_lengths: [0.06, 0.10, 0.09]
+physics:
+  mass: 0.8kg

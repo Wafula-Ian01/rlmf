@@ -1,0 +1,23 @@
+name: QuadBot
+body:
+  segments:
+    - torso
+  length: 0.35
+  width: 0.20
+  height: 0.12
+limbs:
+  - type: leg
+    count: 4
+    joints:
+      hip:
+        min: -60
+        max: 60
+      knee:
+        min: 0
+        max: 130
+      ankle:
+        min: -50
+        max: 50
+    segment_lengths: [0.08, 0.15, 0.12]
+physics:
+  mass: 12kg

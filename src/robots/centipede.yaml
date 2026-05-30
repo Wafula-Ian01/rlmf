@@ -1,0 +1,26 @@
+name: CentipedeBot
+body:
+  segments:
+    - head
+    - seg_1
+    - seg_2
+    - seg_3
+    - seg_4
+    - seg_5
+    - tail
+  length: 0.80
+  width: 0.10
+  height: 0.06
+limbs:
+  - type: leg
+    count: 12
+    joints:
+      hip:
+        min: -45
+        max: 45
+      knee:
+        min: 0
+        max: 90
+    segment_lengths: [0.05, 0.08]
+physics:
+  mass: 0.5kg
