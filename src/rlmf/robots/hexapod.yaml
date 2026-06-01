@@ -1,0 +1,45 @@
+name: Hexapod
+body:
+  segments:
+  - thorax
+  length: 0.3
+  width: 0.18
+  height: 0.09
+limbs:
+- type: leg
+  count: 6
+  joints:
+    hip:
+      min: -90
+      max: 90
+    knee:
+      min: -90
+      max: 120
+    ankle:
+      min: -90
+      max: 90
+  segment_lengths:
+  - 0.07
+  - 0.12
+  - 0.1
+  calibration:
+    hip:
+      zero_offset: 0.0
+      direction: 1
+      min_pulse_us: 500
+      max_pulse_us: 2400
+      speed_dps: 600
+    knee:
+      zero_offset: 0.0
+      direction: 1
+      min_pulse_us: 500
+      max_pulse_us: 2400
+      speed_dps: 600
+    ankle:
+      zero_offset: 0.0
+      direction: 1
+      min_pulse_us: 500
+      max_pulse_us: 2400
+      speed_dps: 600
+physics:
+  mass: 1.2kg

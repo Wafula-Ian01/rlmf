@@ -1,0 +1,45 @@
+name: QuadBot
+body:
+  segments:
+  - torso
+  length: 0.35
+  width: 0.2
+  height: 0.12
+limbs:
+- type: leg
+  count: 4
+  joints:
+    hip:
+      min: -60
+      max: 60
+    knee:
+      min: -90
+      max: 130
+    ankle:
+      min: -90
+      max: 90
+  segment_lengths:
+  - 0.08
+  - 0.15
+  - 0.12
+  calibration:
+    hip:
+      zero_offset: 0.0
+      direction: 1
+      min_pulse_us: 500
+      max_pulse_us: 2500
+      speed_dps: 400
+    knee:
+      zero_offset: 0.0
+      direction: 1
+      min_pulse_us: 500
+      max_pulse_us: 2500
+      speed_dps: 400
+    ankle:
+      zero_offset: 0.0
+      direction: 1
+      min_pulse_us: 500
+      max_pulse_us: 2500
+      speed_dps: 400
+physics:
+  mass: 12kg

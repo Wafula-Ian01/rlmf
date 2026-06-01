@@ -5,68 +5,80 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen)]()
 
-A universal robot body model and locomotion API.  
-Define any legged robot in YAML, then call `robot.walk()`.
+Universal legged-robot locomotion API.  Define any robot in YAML, call `robot.walk()`.
+Works identically for 4-leg, 6-leg, 8-leg, and 12-leg morphologies.
 
 ```python
 from rlmf import Robot
+from rlmf.feedback import FeedbackReader, MPU6050Sensor, FSRContactSensor
 
-robot = Robot.load("hexapod.yaml")
+# Closed-loop (real hardware)
+imu     = MPU6050Sensor(address=0x68)
+contact = FSRContactSensor({"leg_0": 0, "leg_1": 1, "leg_2": 2,
+                             "leg_3": 3, "leg_4": 4, "leg_5": 5})
+fb      = FeedbackReader(imu, contact)
+
+robot = Robot.load("hexapod.yaml", feedback=fb)
+robot.safe_startup()
 robot.walk()
 robot.turn_left(45)
 robot.climb()
-robot.follow_path([(0.5, 0), (0.5, 0.5), (0, 0.5)])
+robot.safe_shutdown()
 ```
-
-The API is **identical** regardless of morphology — 4-leg, 6-leg, 8-leg, 12-leg.  
-No gait code. No IK math. No synchronization logic. No motor coordination code.
 
 ---
 
 ## Installation
 
 ```bash
-pip install rlmf
-```
-
-With Raspberry Pi hardware support (PCA9685 + GPIO servos):
-
-```bash
-pip install "rlmf[pi]"
+pip install rlmf                   # simulation / development
+pip install "rlmf[pi]"            # + Raspberry Pi hardware drivers
 ```
 
 ---
 
-## Quickstart
+## Architecture
 
-```python
-from rlmf import Robot
-import rlmf.robots as robots
-
-# Use a bundled robot definition
-robot = Robot.load(robots.get("hexapod"))
-
-# Or load your own YAML
-robot = Robot.load("my_robot.yaml")
-
-# Behaviours — same API for any morphology
-robot.walk()
-robot.turn_left(45)
-robot.turn_right(30)
-robot.climb()
-robot.stop()
-robot.follow_path([(0.5, 0.0), (0.5, 0.5)])
-
-# Low-level access
-robot.reach("leg_0", (0.20, 0.05, -0.10))   # IK to world target
-robot.move_joint("leg_0.hip", 30.0)          # direct joint control
 ```
+User API            robot.walk() / robot.climb() / robot.follow_path()
+      ↓
+Gait Engine         TripodGait / WaveGait / RippleGait / TrotGait
+      ↓
+Kinematics          Full 3-D IK/FK — exact for all mount angles
+      ↓
+Balance Controller  PID (roll/pitch/yaw) — IMU + contact feedback
+      ↓
+Safety Layer        Torque · Thermal · Power · Pose drift detection
+      ↓
+Motor Layer         JointCalibration → TrajectoryInterpolator → driver
+      ↓
+Hardware            SimulatedDriver / PCA9685 / ChainedPCA9685 / custom
+```
+
+---
+
+## What was fixed in v0.4
+
+**IK sagittal plane error** — v0.3 assumed the knee+ankle plane was vertical
+regardless of mount angle.  For legs at ±30°/±60° this caused errors up to
+180 mm.  v0.4 projects the target into the leg's own sagittal frame, giving
+IK→FK agreement < 0.001 mm on all mount angles.
+
+**Balance controller oscillation** — v0.3 used PI only.  Without the
+derivative term, the controller overshoots and rocks the body at 1–3 Hz.
+v0.4 is a full PID controller using IMU gyro rate directly as the D signal.
+
+**Thermal model ODE bug** — wrong denominator caused the model to saturate
+at ~55 °C instead of the correct ~120 °C, so thermal throttling never fired.
+Fixed and validated against SG90 datasheet (t_80 ≈ 90 s at stall).
+
+**Contact threshold auto-calibration** — v0.3 required manual ADC threshold
+tuning per foot.  v0.4 adds `ContactCalibrator` which measures rest and loaded
+baselines and computes per-foot thresholds automatically.
 
 ---
 
 ## Morphology Description Language
-
-Define any robot in YAML — the framework handles the rest:
 
 ```yaml
 name: HexaBot
@@ -79,108 +91,70 @@ limbs:
   - type: leg
     count: 6
     joints:
-      hip:   {min: -90, max: 90}
-      knee:  {min: 0,   max: 120}
-      ankle: {min: -45, max: 45}
+      hip:   {min: -90, max:  90}
+      knee:  {min: -90, max: 120}
+      ankle: {min: -90, max:  90}
     segment_lengths: [0.07, 0.12, 0.10]
+    calibration:
+      hip:   {zero_offset: 0.0, direction: 1, speed_dps: 600}
+      knee:  {zero_offset: 0.0, direction: 1, speed_dps: 600}
+      ankle: {zero_offset: 0.0, direction: 1, speed_dps: 600}
 physics:
   mass: 1.2kg
 ```
 
-After loading, the full model is immediately introspectable:
+---
 
-```python
-robot.topology.family        # "hexapod"
-robot.topology.limb_count    # 6
-robot.topology.total_joints  # 18
-robot.mass                   # 1.2
-robot.limbs                  # List[Limb]
-robot.joints                 # Dict[str, JointDef]
+## Raspberry Pi Setup
+
+### Hardware
+
+| Component | Purpose |
+|-----------|---------|
+| 2× PCA9685 (0x40, 0x41) | 18-channel servo PWM |
+| MPU-6050 (0x68) | IMU — roll/pitch/yaw |
+| MCP3008 (SPI) | FSR ADC — foot contact |
+| 18× SG90 or MG996R | Joints |
+| 5 V ≥ 6 A PSU | Servo power (separate from Pi) |
+
+### Wiring
+
+```
+Pi 3.3V  →  PCA9685 VCC (both boards), MPU-6050 VCC
+Pi GND   →  common ground (all boards + PSU negative)
+Pi GPIO2 →  SDA (PCA9685 A + B, MPU-6050 — parallel)
+Pi GPIO3 →  SCL (PCA9685 A + B, MPU-6050 — parallel)
+Pi SPI   →  MCP3008 (SCLK=GPIO11, MOSI=GPIO10, MISO=GPIO9, CE0=GPIO8)
+5V PSU+  →  PCA9685 V+ (servo power rail)
+Board B: solder A0 jumper → address becomes 0x41
+```
+
+### Sequence
+
+```bash
+bash pi_demo/setup.sh              # one-time system setup
+python pi_demo/calibration.py      # measure per-joint servo offsets
+python pi_demo/tripod_demo.py      # walk / turn / climb demo
 ```
 
 ---
 
-## Bundled robots
+## Contact calibration
 
 ```python
-import rlmf.robots as robots
+from rlmf import FSRContactSensor, ContactCalibrator
 
-robots.list_robots()          # ['centipede', 'hexapod', 'quadruped', 'spider']
-path = robots.get("hexapod")  # Path to bundled hexapod.yaml
-```
+sensor = FSRContactSensor({"leg_0":0,"leg_1":1,...})
+cal    = ContactCalibrator(sensor)
 
----
+# 1. Lift robot (all feet free)
+cal.measure_rest()
 
-## Architecture
+# 2. Lower robot onto all feet
+cal.measure_loaded()
 
-```
-User API          robot.walk() / robot.turn_left() / robot.climb()
-     ↓
-Gait Engine       TripodGait / WaveGait / RippleGait / TrotGait
-     ↓
-Kinematics        solve_ik() / solve_fk() per limb
-     ↓
-Balance Engine    support polygon · stability margin · tip risk
-     ↓
-Motor Layer       SimulatedDriver / PCA9685 / your hardware
-```
-
-### Gait engine
-
-| Gait | Class | Best for | Duty factor |
-|------|-------|----------|-------------|
-| tripod | `TripodGait` | hexapods, fast walking | 0.50 |
-| wave | `WaveGait` | any, climbing | 0.83 |
-| ripple | `RippleGait` | octopods, medium speed | 0.67 |
-| trot | `TrotGait` | quadrupeds | 0.50 |
-
-Gait selection is automatic — `robot.walk()` picks the right pattern for your morphology.  
-Override it when needed:
-
-```python
-from rlmf import select_gait, TrotGait
-
-gait = select_gait("hexapod", "climb")          # → WaveGait
-frames = robot.get_gait_frames("ripple", num_frames=60)
-```
-
-### Balance engine
-
-```python
-state = robot.balance_state()
-
-state.center_of_mass        # (x, y, z) world space
-state.support_polygon       # convex hull of stance feet
-state.stability_margin      # metres to nearest polygon edge (>0 = stable)
-state.is_stable             # bool
-state.tip_risk              # 0.0 (safe) … 1.0 (falling)
-```
-
-### Motor abstraction
-
-Swap the hardware driver without touching any robot code:
-
-```python
-from rlmf import Robot, MotorAbstractionLayer
-from my_hardware import MyServoDriver       # your implementation
-
-robot = Robot(
-    Robot.load("hexapod.yaml")._model,
-    motor_layer=MotorAbstractionLayer(driver=MyServoDriver()),
-)
-robot.walk()   # drives your hardware
-```
-
-Implement `MotorDriver` for any servo bus:
-
-```python
-from rlmf import MotorDriver
-
-class MyDriver(MotorDriver):
-    def set_angle(self, joint_id, angle_deg, speed=1.0): ...
-    def get_angle(self, joint_id) -> float: ...
-    def enable(self, joint_id): ...
-    def disable(self, joint_id): ...
+# 3. Apply thresholds
+sensor.threshold = cal.thresholds   # per-foot dict
 ```
 
 ---
@@ -188,66 +162,11 @@ class MyDriver(MotorDriver):
 ## CLI
 
 ```bash
-rlmf robots                        # list bundled robots
-rlmf describe hexapod              # print topology
-rlmf describe path/to/mybot.yaml   # your own robot
-rlmf walk hexapod --gait wave      # simulate gait, print stats
-rlmf balance quadruped             # print balance state
+rlmf robots                         # list bundled robots
+rlmf describe hexapod               # topology
+rlmf walk hexapod --gait wave       # simulate gait
+rlmf balance quadruped              # balance state
 ```
-
----
-
-## Raspberry Pi deployment
-
-Install with hardware extras:
-
-```bash
-pip install "rlmf[pi]"
-```
-
-Wire a PCA9685 to the Pi over I2C, then:
-
-```python
-from adafruit_servokit import ServoKit
-from rlmf import Robot, MotorAbstractionLayer
-from rlmf.motors import MotorDriver
-
-class PCA9685Driver(MotorDriver):
-    def __init__(self):
-        self._kit = ServoKit(channels=16)
-        self._map = {}
-
-    def assign(self, joint_id, channel):
-        self._map[joint_id] = channel
-
-    def set_angle(self, joint_id, angle_deg, speed=1.0):
-        ch = self._map.get(joint_id)
-        if ch is not None:
-            self._kit.servo[ch].angle = max(0, min(180, angle_deg + 90))
-
-    def get_angle(self, joint_id): return 0.0
-    def enable(self, joint_id): pass
-    def disable(self, joint_id): pass
-
-driver = PCA9685Driver()
-driver.assign("leg_0.hip", 0)
-# … assign all 18 joints …
-
-import rlmf.robots as robots
-robot = Robot(
-    Robot.load(robots.get("hexapod"))._model,
-    motor_layer=MotorAbstractionLayer(driver=driver),
-)
-robot.walk()   # moves physical servos
-```
-
----
-
-## Roadmap
-
-- **v0.1** — Phase 1: 3–12 leg robots, four gait patterns, analytical IK, balance engine, motor abstraction
-- **v0.2** — Phase 2: biped support, dynamic balance, weight shifting, fall recovery
-- **v0.3** — Phase 3: arbitrary morphologies, terrain adaptation, path planning
 
 ---
 

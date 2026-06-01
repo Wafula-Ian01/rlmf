@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rlmf"
-version = "0.1.0"
+version = "0.1.1"
 description = "Robot Locomotion & Morphology Framework — universal legged-robot API"
 readme = "README.md"
 license = { text = "MIT" }
@@ -27,7 +27,7 @@ keywords = [
 ]
 
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "Intended Audience :: Education",
   "License :: OSI Approved :: MIT License",
@@ -72,30 +72,17 @@ Documentation = "https://github.com/Wafula-Ian01/rlmf/blob/main/README.md"
 Repository    = "https://github.com/Wafula-Ian01/rlmf.git"
 "Bug Tracker" = "https://github.com/Wafula-Ian01/rlmf/issues"
 
-# ── CLI entry-point ──────────────────────────────────────────────────────────
-
 [project.scripts]
 rlmf = "rlmf._cli:main"
-
-# ── Build ────────────────────────────────────────────────────────────────────
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/rlmf"]
 
 [tool.hatch.build.targets.sdist]
-include = [
-  "/src",
-  "/tests",
-  "/README.md",
-  "/LICENSE",
-  "/CHANGELOG.md",
-]
-
-
-# ── Linting (ruff) ───────────────────────────────────────────────────────────
+include = ["/src", "/tests", "/README.md", "/LICENSE", "/CHANGELOG.md"]
 
 [tool.ruff]
-src        = ["src"]
+src = ["src"]
 line-length = 100
 target-version = "py310"
 
@@ -103,18 +90,14 @@ target-version = "py310"
 select = ["E", "F", "W", "I", "UP", "B"]
 ignore = ["E501"]
 
-# ── Type checking (mypy) ─────────────────────────────────────────────────────
-
 [tool.mypy]
-python_version  = "3.10"
-strict          = false
+python_version = "3.10"
+strict = false
 ignore_missing_imports = true
-
-# ── Testing (pytest) ─────────────────────────────────────────────────────────
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts   = "--tb=short -q"
+addopts = "--tb=short -q"
 
 [tool.coverage.run]
 source = ["src/rlmf"]

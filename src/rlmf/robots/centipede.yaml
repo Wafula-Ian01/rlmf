@@ -1,0 +1,41 @@
+name: CentipedeBot
+body:
+  segments:
+  - head
+  - seg_1
+  - seg_2
+  - seg_3
+  - seg_4
+  - seg_5
+  - tail
+  length: 0.8
+  width: 0.1
+  height: 0.06
+limbs:
+- type: leg
+  count: 12
+  joints:
+    hip:
+      min: -45
+      max: 45
+    knee:
+      min: -90
+      max: 90
+  segment_lengths:
+  - 0.05
+  - 0.08
+  calibration:
+    hip:
+      zero_offset: 0.0
+      direction: 1
+      min_pulse_us: 500
+      max_pulse_us: 2400
+      speed_dps: 600
+    knee:
+      zero_offset: 0.0
+      direction: 1
+      min_pulse_us: 500
+      max_pulse_us: 2400
+      speed_dps: 600
+physics:
+  mass: 0.5kg
